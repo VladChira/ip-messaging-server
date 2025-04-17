@@ -2,6 +2,7 @@
 
 services:
   chatapp-backend:
+    container_name: chatapp-backend
     build: .
     ports:
       - "5333:5000"
@@ -17,6 +18,7 @@ services:
 
   chatapp-db:
     image: postgres:15
+    container_name: chatapp-db
     environment:
       POSTGRES_USER: ${POSTGRES_USER}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
