@@ -6,7 +6,7 @@ services:
     env_file:
       - .env
     depends_on:
-      - db
+      - chatapp-db
     volumes:
       - .:/app
     restart: unless-stopped
