@@ -1,0 +1,38 @@
+name: Deploy Messaging App Backend
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    types:
+      - closed
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+
+      - name: Checkout Repository
+        uses: actions/checkout@v3
+
+      - name: Deploy to Server via SSH
+        uses: appleboy/ssh-action@master
+        with:
+          host: ${{ secrets.SERVER_HOST }}
+          username: ${{ secrets.SSH_USER }}
+          key: ${{ secrets.SSH_KEY }}
+          script: |
+            cd ~/chatapp-backend
+
+            git remote set-url origin https://${{ secrets.PAT }}@github.com/VladChira/ip-messaging-server
+
+            echo "Pulling latest changes..."
+            git reset --hard
+            git pull origin main
+
+            echo "Rebuilding and restarting only the Flask backend..."
+            echo "The database will not be redeployed."
+            docker compose up -d --build --force-recreate chatapp-backend
+
+            echo "Deployment complete!"

@@ -28,24 +28,12 @@ If during development you find yourself installing other packages, add them to t
 ### Injecting secrets
 Sensitive information cannot be stored in the github repo, such as the postgresql username and password. These secrets will be injected into the app at runtime using the ``dotenv`` package. Create a file in the root of the project called ``.env`` and ask Vlad for the secrets. The ``.env`` file is automatically gitignored.
 
-### Running the database
-The postgresql database will be run in a Docker container. Review the ``docker-compose.yml`` file, specifically the ``chatapp-db`` service.
+### Running the database container
+The postgresql database will be run in a Docker container. A script to launch the database has been provided: ``run_local.sh``, as well as a script to test the database connection with the injected secrets: ``test_db_conn.py``.
 
-To run the database:
-```bash
-sudo docker compose up chatapp-db -d
-```
-Make sure the secrets are present in the .env file before running this command.
+To look at logs/errors, run ``sudo docker logs chatapp-db -f``.
 
-To view logs/errors:
-```bash
-sudo docker logs -f chatapp-db
-```
-
-To stop the database container:
-```bash
-sudo docker stop chatapp-db
-```
+To stop the db, run ``sudo docker stop chatapp-db``. To remove the db, run ``sudo docker rm chatapp-db`` after stopping the container.
 
 
 ### Running the Flask app
