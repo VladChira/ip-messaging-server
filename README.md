@@ -47,4 +47,6 @@ In production, both the Flask backend and the database will be run in containers
 
 To deploy your code to production, submit a pull request. After it's merged to the main branch, a Github workflow will automatically deploy the backend to the server. 
 
+Please do not touch the ``Dockerfile`` and the ``docker-compose.yml`` files. They are meant for production setup.
+
 You may review the workflow that deploys this app in the ``.github/workflows`` folder and/or ask Vlad for more info.
