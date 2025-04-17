@@ -8,6 +8,6 @@ from flask import jsonify
 """
 
 def register_routes(app):
-    @app.route("/messaging-api")
+    @app.route("/messaging-api", strict_slashes=False)
     def index():
         return jsonify({"status": "Backend API running"})
