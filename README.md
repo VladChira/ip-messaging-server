@@ -29,7 +29,7 @@ If during development you find yourself installing other packages, add them to t
 Sensitive information cannot be stored in the github repo, such as the postgresql username and password. These secrets will be injected into the app at runtime using the ``dotenv`` package. Create a file in the root of the project called ``.env`` and ask Vlad for the secrets. The ``.env`` file is automatically gitignored.
 
 ### Running the database container
-The postgresql database will be run in a Docker container. A script to launch the database has been provided: ``run_local.sh``, as well as a script to test the database connection with the injected secrets: ``test_db_conn.py``.
+The postgresql database will be run in a Docker container. A script to launch the database has been provided: ``run_db_local.sh``, as well as a script to test the database connection with the injected secrets: ``test_db_conn.py``.
 
 To look at logs/errors, run ``sudo docker logs chatapp-db -f``.
 
