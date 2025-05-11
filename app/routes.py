@@ -34,6 +34,6 @@ def register_routes(app):
         # Placeholder for rejecting a friend request
         return jsonify({"status": "Friend request rejected"}), 200    
     
-    @app.route("/messaging-api/get-friends-by-user-id", methods=["GET"], strict_slashes=False)
-    def get_friends_by_user_id():
-        return jsonify({"friends": [friendship for friendship in friendships]})
+    @app.route("/messaging-api/get-friends-by-user-id/<int:user_id>", methods=["GET"], strict_slashes=False)
+    def get_friends_by_user_id(user_id):
+        return jsonify({"friends": [friendship for friendship in friendships if friendship.get("userId") == user_id]})
