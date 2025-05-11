@@ -6,6 +6,8 @@ from dotenv import load_dotenv
 import os
 
 from app.database import create_users
+from app.database import create_friendships
+from app.database import create_friend_requests
 
 from app.routes import register_routes
 
@@ -13,6 +15,8 @@ socketio = SocketIO(cors_allowed_origins="*")
 
 def create_app():
     create_users()
+    create_friendships()
+    create_friend_requests()
 
     load_dotenv()
 
