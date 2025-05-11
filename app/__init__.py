@@ -5,11 +5,15 @@ from flask_socketio import SocketIO
 from dotenv import load_dotenv
 import os
 
+from app.database import create_users
+
 from app.routes import register_routes
 
 socketio = SocketIO(cors_allowed_origins="*")
 
 def create_app():
+    create_users()
+
     load_dotenv()
 
     app = Flask(__name__)
