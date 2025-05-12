@@ -104,19 +104,11 @@ def create_friendships():
         user2Id=6, # Frank
         createdAt=datetime.datetime(2023, 4, 10, 12, 15, 0)
     )
-    # Example: Bob (admin) is friends with Grace (admin)
-    friendship4 = Friendship(
-        friendshipId=4,
-        user1Id=2, # Bob
-        user2Id=7, # Grace
-        createdAt=datetime.datetime(2023, 1, 20, 9, 0, 0)
-    )
 
 
     friendships.append(friendship1)
     friendships.append(friendship2)
     friendships.append(friendship3)
-    friendships.append(friendship4)
 
 
 def create_friend_requests():
