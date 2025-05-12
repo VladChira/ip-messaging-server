@@ -2,6 +2,8 @@ from flask import Flask
 from flask_sqlalchemy import SQLAlchemy
 from flask_migrate import Migrate
 from flask_socketio import SocketIO
+from flask_jwt_extended import JWTManager
+from datetime import timedelta
 from dotenv import load_dotenv
 import os
 
@@ -12,6 +14,7 @@ from app.database import create_friend_requests
 from app.routes import register_routes
 
 socketio = SocketIO(cors_allowed_origins="*")
+jwt = JWTManager()
 
 def create_app():
     create_users()
@@ -21,6 +24,12 @@ def create_app():
     load_dotenv()
 
     app = Flask(__name__)
+    
+    # Configurare JWT
+    app.config["JWT_SECRET_KEY"] = os.getenv("JWT_SECRET_KEY", "super-secret-key-change-in-production")
+    app.config["JWT_ACCESS_TOKEN_EXPIRES"] = timedelta(hours=5)
+    
+    jwt.init_app(app)
     socketio.init_app(app)
 
     register_routes(app)

@@ -1,7 +1,12 @@
-# routes.py
-
-from flask import jsonify, request, abort # Added request and abort
-import datetime # Needed for timestamps
+from flask import jsonify, request, abort
+from flask_jwt_extended import (
+    create_access_token, 
+    jwt_required, 
+    get_jwt_identity,
+    get_jwt
+)
+import datetime
+import functools
 
 # Import data lists and classes
 from app.database import users, friendships, friendrequests
@@ -56,6 +61,31 @@ def get_next_id(data_list: list, id_field_name: str) -> int:
         return 1
     return max(getattr(item, id_field_name) for item in data_list) + 1
 
+# --- JWT Auth Middleware ---
+def jwt_auth_required(fn):
+    """
+    Custom decorator that combines jwt_required with additional checks.
+    This will ensure all routes are protected by JWT authentication.
+    """
+    @functools.wraps(fn)
+    @jwt_required()  # Require JWT for all routes using this decorator
+    def wrapper(*args, **kwargs):
+        # Get the current user ID from the JWT token
+        current_user_id = get_jwt_identity()
+        
+        # Check if the user exists in the database
+        user = find_user_by_id(current_user_id)
+        if not user:
+            return jsonify({"error": "Unauthorized: User not found"}), 401
+            
+        # Check if the user is active
+        if user.status != "active":
+            return jsonify({"error": "Account is not active"}), 403
+            
+        # Call the original function
+        return fn(*args, **kwargs)
+    return wrapper
+
 # --- Route Registration ---
 def register_routes(app):
 
@@ -63,7 +93,50 @@ def register_routes(app):
     def index():
         return jsonify({"status": "Backend API running"})
 
+    # === Login Route ===
+    @app.route("/messaging-api/login", methods=["POST"], strict_slashes=False)
+    def login():
+        data = request.get_json()
+        if not data:
+            return jsonify({"error": "Invalid JSON payload"}), 400
+            
+        # Verify if username or email is provided
+        if not ("username" in data or "email" in data) or "password" not in data:
+            return jsonify({"error": "Missing login credentials"}), 400
+            
+        # Check if username or email exists
+        user = None
+        if "username" in data:
+            user = find_user_by_username(data["username"])
+        elif "email" in data:
+            user = find_user_by_email(data["email"])
+            
+        # If user not found or password doesn't match
+        if not user or not user.check_password(data["password"]):
+            return jsonify({"error": "Invalid credentials"}), 401
+            
+        # Verify if the user is active
+        if user.status != "active":
+            return jsonify({"error": "Account is not active"}), 403
+            
+        # Generare token JWT
+        access_token = create_access_token(
+            identity=user.userId,
+            additional_claims={
+                "username": user.username,
+                "role": user.role.value
+            }
+        )
+        
+        # Return user data and token
+        return jsonify({
+            "user": user.to_dict(),
+            "token": access_token
+        }), 200
+        
+    # === Protected Routes ===
     @app.route("/messaging-api/users", methods=["GET"], strict_slashes=False)
+    @jwt_auth_required
     def get_all_users():
         return jsonify({"users": [user.to_dict() for user in users]})
 
@@ -110,10 +183,16 @@ def register_routes(app):
 
     # === Friend Request Management ===
     @app.route("/messaging-api/send-friend-request", methods=["POST"], strict_slashes=False)
+    @jwt_auth_required
     def send_friend_request():
         data = request.get_json()
         if not data or "senderId" not in data or "receiverId" not in data:
             return jsonify({"error": "Missing senderId or receiverId in request body"}), 400
+
+        # Verify if senderId is the same as the authenticated user
+        current_user_id = get_jwt_identity()
+        if int(data["senderId"]) != current_user_id:
+            return jsonify({"error": "Unauthorized: senderId must match authenticated user"}), 403
 
         sender_id = data["senderId"]
         receiver_id = data["receiverId"]
@@ -154,10 +233,16 @@ def register_routes(app):
             return jsonify({"error": str(e)}), 400
 
     @app.route("/messaging-api/accept-friend-request", methods=["POST"], strict_slashes=False)
+    @jwt_auth_required
     def accept_friend_request():
         data = request.get_json()
         if not data or "requestId" not in data or "accepterId" not in data:
              return jsonify({"error": "Missing requestId or accepterId in request body"}), 400
+
+        # Verify if accepterId is the same as the authenticated user
+        current_user_id = get_jwt_identity()
+        if int(data["accepterId"]) != current_user_id:
+            return jsonify({"error": "Unauthorized: accepterId must match authenticated user"}), 403
 
         request_id = data["requestId"]
         accepter_id = data["accepterId"]
@@ -205,10 +290,16 @@ def register_routes(app):
 
     # Add Reject Friend Request for completeness (similar logic to accept)
     @app.route("/messaging-api/reject-friend-request", methods=["POST"], strict_slashes=False)
+    @jwt_auth_required
     def reject_friend_request():
         data = request.get_json()
         if not data or "requestId" not in data or "rejecterId" not in data:
              return jsonify({"error": "Missing requestId or rejecterId in request body"}), 400
+
+        # Verify if rejecterId is the same as the authenticated user
+        current_user_id = get_jwt_identity()
+        if int(data["rejecterId"]) != current_user_id:
+            return jsonify({"error": "Unauthorized: rejecterId must match authenticated user"}), 403
 
         request_id = data["requestId"]
         rejecter_id = data["rejecterId"] # The user rejecting
@@ -249,6 +340,7 @@ def register_routes(app):
 
     # === Friendship Management ===
     @app.route("/messaging-api/get-friends-by-user-id/<int:user_id>", methods=["GET"], strict_slashes=False)
+    @jwt_auth_required
     def get_friends_by_user_id(user_id):
         # This implementation should already be correct from previous steps
         target_user = find_user_by_id(user_id)
@@ -271,10 +363,16 @@ def register_routes(app):
         return jsonify({"friends": friend_users})
 
     @app.route("/messaging-api/remove-friend", methods=["POST"], strict_slashes=False) # Using POST for action
+    @jwt_auth_required
     def remove_friend():
         data = request.get_json()
         if not data or "userId" not in data or "friendId" not in data:
              return jsonify({"error": "Missing userId or friendId in request body"}), 400
+
+        # Verify if userId is the same as the authenticated user
+        current_user_id = get_jwt_identity()
+        if int(data["userId"]) != current_user_id:
+            return jsonify({"error": "Unauthorized: userId must match authenticated user"}), 403
 
         user_id = data["userId"]
         friend_id = data["friendId"]
@@ -301,8 +399,17 @@ def register_routes(app):
 
     # === User Account Management ===
     @app.route("/messaging-api/delete-user/<int:user_id>", methods=["DELETE"], strict_slashes=False)
+    @jwt_auth_required
     def delete_user(user_id):
         global users, friendships, friendrequests # Declare modification of globals
+
+        # Verify if userId is the same as the authenticated user or admin
+        current_user_id = get_jwt_identity()
+        current_user = find_user_by_id(current_user_id)
+        
+        # Only allow admin or the user themselves to delete the account
+        if current_user.role != Role.ADMIN and current_user_id != user_id:
+            return jsonify({"error": "Unauthorized: You can only delete your own account unless you're an admin"}), 403
 
         user_to_delete = find_user_by_id(user_id)
         if not user_to_delete:
@@ -326,7 +433,13 @@ def register_routes(app):
         return jsonify({"message": f"User {user_id} and associated data deleted successfully"}), 200
 
     @app.route("/messaging-api/change-name/<int:user_id>", methods=["PATCH"], strict_slashes=False)
+    @jwt_auth_required
     def change_name(user_id):
+        # Verify if userId is the same as the authenticated user
+        current_user_id = get_jwt_identity()
+        if current_user_id != user_id:
+            return jsonify({"error": "Unauthorized: You can only change your own name"}), 403
+            
         user = find_user_by_id(user_id)
         if not user:
             return jsonify({"error": f"User with ID {user_id} not found"}), 404
@@ -343,7 +456,13 @@ def register_routes(app):
         return jsonify(user.to_dict()), 200
 
     @app.route("/messaging-api/change-password/<int:user_id>", methods=["PATCH"], strict_slashes=False)
+    @jwt_auth_required
     def change_password(user_id):
+        # Verify if userId is the same as the authenticated user
+        current_user_id = get_jwt_identity()
+        if current_user_id != user_id:
+            return jsonify({"error": "Unauthorized: You can only change your own password"}), 403
+            
         user = find_user_by_id(user_id)
         if not user:
             return jsonify({"error": f"User with ID {user_id} not found"}), 404
@@ -364,7 +483,13 @@ def register_routes(app):
 
 
     @app.route("/messaging-api/change-status/<int:user_id>", methods=["PATCH"], strict_slashes=False)
+    @jwt_auth_required
     def change_status(user_id):
+        # Verify if userId is the same as the authenticated user
+        current_user_id = get_jwt_identity()
+        if current_user_id != user_id:
+            return jsonify({"error": "Unauthorized: You can only change your own status"}), 403
+            
         user = find_user_by_id(user_id)
         if not user:
             return jsonify({"error": f"User with ID {user_id} not found"}), 404
@@ -384,7 +509,15 @@ def register_routes(app):
 
     # --- (Optional) Add a route to view friend requests for a user ---
     @app.route("/messaging-api/get-friend-requests/<int:user_id>", methods=["GET"], strict_slashes=False)
+    @jwt_auth_required
     def get_friend_requests_for_user(user_id):
+        # Verify if userId is the same as the authenticated user or admin
+        current_user_id = get_jwt_identity()
+        current_user = find_user_by_id(current_user_id)
+        
+        if current_user_id != user_id and current_user.role != Role.ADMIN:
+            return jsonify({"error": "Unauthorized: You can only view your own friend requests"}), 403
+            
         target_user = find_user_by_id(user_id)
         if not target_user:
             return jsonify({"error": f"User with ID {user_id} not found."}), 404
