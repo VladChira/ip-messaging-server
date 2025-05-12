@@ -1,4 +1,6 @@
 from app.user import User, Role
+from app.friendship import Friendship
+from app.friendrequest import FriendRequest, RequestStatus
 import datetime
 
 users = []
@@ -80,54 +82,92 @@ def create_users():
     users.append(user6)
 
 def create_friendships():
-    friendship1 = {
-        "friendshipId": 1,
-        "user1Id": 1,
-        "user2Id": 2,
-        "createdAt": datetime.datetime(2023, 2, 20, 14, 0, 0)
-    }
 
-    friendship2 = {
-        "friendshipId": 2,
-        "user1Id": 3,
-        "user2Id": 4,
-        "createdAt": datetime.datetime(2023, 3, 25, 16, 30, 0)
-    }
+    # Create Friendship objects instead of dictionaries
+    friendship1 = Friendship(
+        friendshipId=1,
+        user1Id=1, # Alice
+        user2Id=3, # Charlie
+        createdAt=datetime.datetime(2023, 2, 20, 14, 0, 0)
+    )
 
-    friendship3 = {
-        "friendshipId": 3,
-        "user1Id": 5,
-        "user2Id": 6,
-        "createdAt": datetime.datetime(2023, 4, 10, 12, 15, 0)
-    }
+    friendship2 = Friendship(
+        friendshipId=2,
+        user1Id=1, # Alice
+        user2Id=4, # Diana
+        createdAt=datetime.datetime(2023, 3, 25, 16, 30, 0)
+    )
+
+    friendship3 = Friendship(
+        friendshipId=3,
+        user1Id=5, # Eve
+        user2Id=6, # Frank
+        createdAt=datetime.datetime(2023, 4, 10, 12, 15, 0)
+    )
+    # Example: Bob (admin) is friends with Grace (admin)
+    friendship4 = Friendship(
+        friendshipId=4,
+        user1Id=2, # Bob
+        user2Id=7, # Grace
+        createdAt=datetime.datetime(2023, 1, 20, 9, 0, 0)
+    )
+
 
     friendships.append(friendship1)
     friendships.append(friendship2)
     friendships.append(friendship3)
+    friendships.append(friendship4)
+
 
 def create_friend_requests():
-    friendrequest1 = {
-        "friendrequestId": 1,
-        "userId": 1,
-        "friendId": 3,
-        "createdAt": datetime.datetime(2023, 5, 5, 10, 0, 0)
-    }
+     # Clear list before creating
+    friendrequests.clear()
 
-    friendrequest2 = {
-        "friendrequestId": 2,
-        "userId": 2,
-        "friendId": 4,
-        "createdAt": datetime.datetime(2023, 6, 15, 11, 30, 0)
-    }
+    # Create FriendRequest objects instead of dictionaries
+    # Note the change from userId/friendId to senderId/receiverId
+    friendrequest1 = FriendRequest(
+        requestId=1,
+        senderId=1, # Alice wants to add Eve
+        receiverId=5,
+        status=RequestStatus.PENDING, # Explicitly set status
+        createdAt=datetime.datetime(2023, 5, 5, 10, 0, 0)
+    )
 
-    friendrequest3 = {
-        "friendrequestId": 3,
-        "userId": 5,
-        "friendId": 7,
-        "createdAt": datetime.datetime(2023, 7, 20, 9, 45, 0)
-    }
+    friendrequest2 = FriendRequest(
+        requestId=2,
+        senderId=2, # Bob wants to add Diana
+        receiverId=4,
+        status=RequestStatus.PENDING,
+        createdAt=datetime.datetime(2023, 6, 15, 11, 30, 0)
+    )
+
+    friendrequest3 = FriendRequest(
+        requestId=3,
+        senderId=6, # Frank wants to add Charlie
+        receiverId=3,
+        status=RequestStatus.PENDING,
+        createdAt=datetime.datetime(2023, 7, 20, 9, 45, 0)
+    )
+    # Example: A request that was accepted (but maybe friendship not created yet, or just for demo)
+    friendrequest4 = FriendRequest(
+        requestId=4,
+        senderId=7, # Grace sent to Alice
+        receiverId=1,
+        status=RequestStatus.ACCEPTED,
+        createdAt=datetime.datetime(2023, 8, 1, 12, 0, 0)
+    )
+     # Example: A request that was rejected
+    friendrequest5 = FriendRequest(
+        requestId=5,
+        senderId=3, # Charlie sent to Bob
+        receiverId=2,
+        status=RequestStatus.REJECTED,
+        createdAt=datetime.datetime(2023, 8, 5, 15, 0, 0)
+    )
+
 
     friendrequests.append(friendrequest1)
     friendrequests.append(friendrequest2)
     friendrequests.append(friendrequest3)
-    
+    friendrequests.append(friendrequest4)
+    friendrequests.append(friendrequest5)
