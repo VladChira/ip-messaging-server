@@ -529,3 +529,43 @@ def register_routes(app):
             "incoming_pending": incoming_requests,
             "outgoing_pending": outgoing_requests
         })
+
+    # === Search Users ===
+    @app.route("/messaging-api/search-users", methods=["GET"], strict_slashes=False)
+    @jwt_auth_required
+    def search_users():
+        query = request.args.get('query', '').lower()
+        if not query or len(query) < 2:
+            return jsonify({"users": []}), 200
+            
+        # Get current user ID
+        current_user_id = get_jwt_identity()
+        
+        # Find all users matching the query
+        matching_users = []
+        for user in users:
+            # Skip the current user
+            if user.userId == current_user_id:
+                continue
+                
+            # Check if name or username contains the query
+            if query in user.name.lower() or query in user.username.lower():
+                # Check if already friends
+                is_friend = find_friendship(current_user_id, user.userId) is not None
+                
+                # Skip if already friends
+                if is_friend:
+                    continue
+                    
+                # Check if there's a pending request
+                request_sent = find_pending_request(current_user_id, user.userId) is not None
+                
+                # Add user to results
+                matching_users.append({
+                    "userId": user.userId,
+                    "name": user.name,
+                    "username": user.username,
+                    "requestSent": request_sent
+                })
+        
+        return jsonify({"users": matching_users})
