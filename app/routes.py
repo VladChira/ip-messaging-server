@@ -115,10 +115,6 @@ def register_routes(app):
         if not user or not user.check_password(data["password"]):
             return jsonify({"error": "Invalid credentials"}), 401
             
-        # Verify if the user is active
-        if user.status != "active":
-            return jsonify({"error": "Account is not active"}), 403
-            
         # Generare token JWT
         access_token = create_access_token(
             identity=user.userId,
