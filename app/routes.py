@@ -495,11 +495,6 @@ def register_routes(app):
             return jsonify({"error": "Missing 'newStatus' in request body"}), 400
 
         new_status = data["newStatus"]
-        # Optional: Add validation for allowed statuses
-        allowed_statuses = ["active", "inactive", "away", "busy"] # Example
-        if not isinstance(new_status, str) or new_status not in allowed_statuses:
-             return jsonify({"error": f"Invalid status. Must be one of: {', '.join(allowed_statuses)}"}), 400
-
         user.status = new_status
         return jsonify(user.to_dict()), 200
 
