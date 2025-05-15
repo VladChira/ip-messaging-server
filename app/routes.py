@@ -5,11 +5,14 @@ from flask_jwt_extended import (
     get_jwt_identity,
     get_jwt
 )
+
 import datetime
 import functools
 
 # Import data lists and classes
+from app.chat import Chat, ChatType
 from app.database import users, friendships, friendrequests
+from app.database import user_chats, chats, get_user_pair_key, one_on_one_index
 from app.user import User, Role
 from app.friendship import Friendship
 from app.friendrequest import FriendRequest, RequestStatus
@@ -575,3 +578,85 @@ def register_routes(app):
                 })
         
         return jsonify({"users": matching_users})
+    
+    @app.route("/messaging-api/get-chats", methods=["GET"])
+    @jwt_auth_required
+    @cross_origin()
+    def get_chats_for_user():
+        user_id = get_jwt_identity()
+        chat_ids = user_chats.get(user_id, [])
+        result = [chats[chat_id].to_dict() for chat_id in chat_ids if chat_id in chats]
+        return jsonify({"chats": result})
+
+    @app.route("/messaging-api/get-messages/<string:chat_id>", methods=["GET"])
+    @jwt_auth_required
+    def get_messages(chat_id):
+        if chat_id not in chats:
+            return jsonify({"error": "Chat not found"}), 404
+        return jsonify({"messages": chats[chat_id].get_messages()})
+
+    @app.route("/messaging-api/get-members/<string:chat_id>", methods=["GET"])
+    @jwt_auth_required
+    def get_members(chat_id):
+        if chat_id not in chats:
+            return jsonify({"error": "Chat not found"}), 404
+        return jsonify({"members": chats[chat_id].get_members()})
+    
+
+    @app.route("/messaging-api/create-chat", methods=["POST"])
+    @jwt_auth_required
+    def create_chat():
+        data = request.get_json()
+        user_id = str(get_jwt_identity())
+
+        chat_type = data.get("chatType")
+        name = data.get("name", None)
+        member_ids = data.get("memberIds", [])
+
+        # Ensure member IDs are strings (matching your user_id type)
+        member_ids = list(map(str, member_ids))
+        
+        if chat_type not in ["one_on_one", "group"]:
+            return jsonify({"error": "Invalid chat type"}), 400
+
+        # Personal chat must be exactly two members: you and one other
+        if chat_type == "one_on_one":
+            if len(member_ids) != 1 or member_ids[0] == user_id:
+                return jsonify({"error": "One-on-one chats must include exactly one *other* user"}), 400
+
+            other_id = member_ids[0]
+            key = get_user_pair_key(user_id, other_id)
+
+            if key in one_on_one_index:
+                existing_chat_id = one_on_one_index[key]
+                return jsonify({
+                    "chat": chats[existing_chat_id].to_dict(),
+                    "message": "One-on-one chat already exists"
+                }), 200
+
+            # Create new one-on-one chat
+            chat = Chat(chat_type=ChatType.ONE_ON_ONE)
+            chat.add_member(user_id)
+            chat.add_member(other_id)
+
+            chats[chat.chat_id] = chat
+            one_on_one_index[key] = chat.chat_id
+
+            user_chats[user_id].append(chat.chat_id)
+            user_chats[other_id].append(chat.chat_id)
+
+            return jsonify({"chat": chat.to_dict()}), 201
+
+        # Group chat creation
+        chat = Chat(chat_type=ChatType.GROUP, name=name)
+        chat.add_member(user_id)
+        for uid in member_ids:
+            chat.add_member(uid)
+
+        chats[chat.chat_id] = chat
+        for member in chat.members:
+            user_chats[member.user_id].append(chat.chat_id)
+
+        return jsonify({"chat": chat.to_dict()}), 201
+
+

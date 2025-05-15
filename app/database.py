@@ -1,3 +1,5 @@
+from collections import defaultdict
+from app.chat import Chat, ChatType
 from app.user import User, Role
 from app.friendship import Friendship
 from app.friendrequest import FriendRequest, RequestStatus
@@ -6,6 +8,12 @@ import datetime
 users = []
 friendships = []
 friendrequests = []
+chats = {}
+user_chats = defaultdict(list)
+one_on_one_index = {}  # (user1_id, user2_id) -> chat_id
+
+def get_user_pair_key(user1_id, user2_id):
+    return tuple(sorted([str(user1_id), str(user2_id)]))  # Always in the same order
 
 def create_users():
     user1 = User(
@@ -110,7 +118,6 @@ def create_friendships():
     friendships.append(friendship2)
     friendships.append(friendship3)
 
-
 def create_friend_requests():
      # Clear list before creating
     friendrequests.clear()
@@ -163,3 +170,16 @@ def create_friend_requests():
     friendrequests.append(friendrequest3)
     friendrequests.append(friendrequest4)
     friendrequests.append(friendrequest5)
+
+def create_chats():
+    chat = Chat(chat_type=ChatType.ONE_ON_ONE)
+    chat.add_member(1)
+    chat.add_member(2)
+
+    key = get_user_pair_key(1, 2)
+
+    chats[chat.chat_id] = chat
+    one_on_one_index[key] = chat.chat_id
+
+    user_chats[1].append(chat.chat_id)
+    user_chats[2].append(chat.chat_id)
