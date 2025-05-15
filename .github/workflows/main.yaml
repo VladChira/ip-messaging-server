@@ -29,7 +29,6 @@ jobs:
             git remote set-url origin https://${{ secrets.PAT }}@github.com/VladChira/ip-messaging-server
 
             echo "Pulling latest changes..."
-            git reset --hard
             git pull origin main
 
             echo "Rebuilding and restarting only the Flask backend..."
