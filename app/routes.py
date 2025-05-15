@@ -78,10 +78,6 @@ def jwt_auth_required(fn):
         if not user:
             return jsonify({"error": "Unauthorized: User not found"}), 401
             
-        # Check if the user is active
-        if user.status != "active":
-            return jsonify({"error": "Account is not active"}), 403
-            
         # Call the original function
         return fn(*args, **kwargs)
     return wrapper
