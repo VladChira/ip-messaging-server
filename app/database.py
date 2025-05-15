@@ -1,5 +1,6 @@
 from collections import defaultdict
 from app.chat import Chat, ChatType
+from app.message import Message
 from app.user import User, Role
 from app.friendship import Friendship
 from app.friendrequest import FriendRequest, RequestStatus
@@ -183,3 +184,5 @@ def create_chats():
 
     user_chats[1].append(chat.chat_id)
     user_chats[2].append(chat.chat_id)
+
+    chat.add_message(1, "Hello, world!")

@@ -579,7 +579,7 @@ def register_routes(app):
         
         return jsonify({"users": matching_users})
     
-    @app.route("/messaging-api/get-chats", methods=["GET"])
+    @app.route("/messaging-api/get-chats", methods=["GET"], strict_slashes=False)
     @jwt_auth_required
     def get_chats_for_user():
         user_id = get_jwt_identity()

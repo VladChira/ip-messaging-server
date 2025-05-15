@@ -7,7 +7,7 @@ class Message:
         self.chat_id = chat_id
         self.sender_id = sender_id
         self.text = text
-        self.sent_at = datetime.utcnow()
+        self.sent_at = datetime.datetime.now(datetime.UTC)
 
     def to_dict(self):
         return {
