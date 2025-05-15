@@ -510,10 +510,16 @@ def register_routes(app):
             return jsonify({"error": f"User with ID {user_id} not found."}), 404
 
         # Find requests where the user is the receiver (incoming)
-        incoming_requests = [
-            req.to_dict() for req in friendrequests
-            if req.receiverId == user_id and req.status == RequestStatus.PENDING
-        ]
+        incoming_requests = []
+        for req in friendrequests:
+            if req.receiverId == user_id and req.status == RequestStatus.PENDING:
+                request_data = req.to_dict()
+                # Find the sender user to include their details
+                sender = find_user_by_id(req.senderId)
+                if sender:
+                    request_data["senderName"] = sender.name
+                    request_data["senderUsername"] = sender.username
+                incoming_requests.append(request_data)
 
         # Find requests where the user is the sender (outgoing)
         outgoing_requests = [
