@@ -78,10 +78,6 @@ def jwt_auth_required(fn):
         if not user:
             return jsonify({"error": "Unauthorized: User not found"}), 401
             
-        # Check if the user is active
-        if user.status != "active":
-            return jsonify({"error": "Account is not active"}), 403
-            
         # Call the original function
         return fn(*args, **kwargs)
     return wrapper
@@ -114,10 +110,6 @@ def register_routes(app):
         # If user not found or password doesn't match
         if not user or not user.check_password(data["password"]):
             return jsonify({"error": "Invalid credentials"}), 401
-            
-        # Verify if the user is active
-        if user.status != "active":
-            return jsonify({"error": "Account is not active"}), 403
             
         # Generare token JWT
         access_token = create_access_token(
@@ -499,11 +491,6 @@ def register_routes(app):
             return jsonify({"error": "Missing 'newStatus' in request body"}), 400
 
         new_status = data["newStatus"]
-        # Optional: Add validation for allowed statuses
-        allowed_statuses = ["active", "inactive", "away", "busy"] # Example
-        if not isinstance(new_status, str) or new_status not in allowed_statuses:
-             return jsonify({"error": f"Invalid status. Must be one of: {', '.join(allowed_statuses)}"}), 400
-
         user.status = new_status
         return jsonify(user.to_dict()), 200
 
@@ -542,7 +529,7 @@ def register_routes(app):
             "incoming_pending": incoming_requests,
             "outgoing_pending": outgoing_requests
         })
-    
+
     # === Search Users ===
     @app.route("/messaging-api/search-users", methods=["GET"], strict_slashes=False)
     @jwt_auth_required
