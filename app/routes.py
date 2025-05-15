@@ -581,7 +581,6 @@ def register_routes(app):
     
     @app.route("/messaging-api/get-chats", methods=["GET"])
     @jwt_auth_required
-    @cross_origin()
     def get_chats_for_user():
         user_id = get_jwt_identity()
         chat_ids = user_chats.get(user_id, [])
