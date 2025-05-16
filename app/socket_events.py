@@ -64,6 +64,7 @@ def handle_join_chat(data: Dict[str, Any]):
     """
     Client asks to join real-time updates for a chat room.
     """
+    print('Client joined chat')
     chat_id = data.get("chatId")
     sid = request.sid
     user_id = online_users.get(sid)
@@ -125,6 +126,7 @@ def handle_send_message(data: Dict[str, Any]):
     Receive a new message, persist it to in-memory store, then broadcast.
     Payload may include an optional tempId for client-side optimistic UI.
     """
+    print('Client sent a message')
     chat_id = data.get("chatId")
     text = data.get("text")
     temp_id = data.get("tempId")
@@ -136,10 +138,14 @@ def handle_send_message(data: Dict[str, Any]):
         emit("error", {"message": "Not authenticated"})
         return
 
+    print(chats)
+    print(chat_id)
+
     if not chat:
         emit("error", {"message": "Chat not found"})
         return
-
+    
+    
     if not any(m.user_id == user_id for m in chat.members):
         emit("error", {"message": "Not a member of chat"})
         return

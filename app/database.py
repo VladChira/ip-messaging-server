@@ -182,6 +182,8 @@ def create_chats():
     chats[chat.chat_id] = chat
     one_on_one_index[key] = chat.chat_id
 
+    print(chat.chat_id)
+
     user_chats[1].append(chat.chat_id)
     user_chats[2].append(chat.chat_id)
 
