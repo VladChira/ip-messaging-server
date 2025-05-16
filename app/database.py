@@ -186,3 +186,33 @@ def create_chats():
     user_chats[2].append(chat.chat_id)
 
     chat.add_message(1, "Hello, world!")
+
+    chat2 = Chat(chat_type=ChatType.ONE_ON_ONE)
+    chat2.add_member(1)
+    chat2.add_member(3)
+
+    key = get_user_pair_key(1, 3)
+
+    chats[chat2.chat_id] = chat2
+    one_on_one_index[key] = chat2.chat_id
+
+    user_chats[1].append(chat2.chat_id)
+    user_chats[3].append(chat2.chat_id)
+
+    chat2.add_message(2, "Hello again, world!")
+
+
+    chat3 = Chat(chat_type=ChatType.GROUP, name="Test Group")
+    chat3.add_member(1)
+    chat3.add_member(2)
+    chat3.add_member(3)
+
+    chats[chat3.chat_id] = chat3
+
+    user_chats[1].append(chat3.chat_id)
+    user_chats[2].append(chat3.chat_id)
+    user_chats[3].append(chat3.chat_id)
+
+    chat3.add_message(1, "Hello group!")
+    chat3.add_message(2, "Hello group again!")
+    chat3.add_message(3, "Hello group again again!")
