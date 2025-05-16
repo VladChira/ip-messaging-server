@@ -18,8 +18,13 @@ from app.database import create_chats
 
 from app.routes import register_routes
 
-socketio = SocketIO(cors_allowed_origins="*", async_mode='eventlet')
-jwt = JWTManager()
+application = Flask(__name__)
+ # Configurare JWT
+application.config["JWT_SECRET_KEY"] = os.getenv("JWT_SECRET_KEY", "super-secret-key-change-in-production")
+application.config["JWT_ACCESS_TOKEN_EXPIRES"] = timedelta(hours=5)
+
+socketio = SocketIO(application, cors_allowed_origins="*", async_mode='eventlet', path='/messaging-api')
+jwt = JWTManager(application)
 
 def create_app():
     create_users()
@@ -29,15 +34,7 @@ def create_app():
 
     load_dotenv()
 
-    app = Flask(__name__)
-    
-    # Configurare JWT
-    app.config["JWT_SECRET_KEY"] = os.getenv("JWT_SECRET_KEY", "super-secret-key-change-in-production")
-    app.config["JWT_ACCESS_TOKEN_EXPIRES"] = timedelta(hours=5)
-    
-    jwt.init_app(app)
-    socketio.init_app(app)
+    # ensure our socket handlers get registered
+    import app.socket_events  
 
-    register_routes(app)
-    from app import socket_events
-    return app
+    register_routes(application)

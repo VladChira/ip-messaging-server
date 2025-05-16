@@ -9,6 +9,7 @@ from flask_jwt_extended import (
 import datetime
 import functools
 
+
 # Import data lists and classes
 from app.chat import Chat, ChatType
 from app.database import users, friendships, friendrequests
