@@ -199,7 +199,7 @@ def create_chats():
     user_chats[1].append(chat2.chat_id)
     user_chats[3].append(chat2.chat_id)
 
-    chat2.add_message(2, "Hello again, world!")
+    chat2.add_message(3, "Hello again, world!")
 
 
     chat3 = Chat(chat_type=ChatType.GROUP, name="Test Group")
