@@ -89,12 +89,12 @@ def jwt_auth_required(fn):
 # --- Route Registration ---
 def register_routes(app):
 
-    @app.route("/messaging-api", strict_slashes=False)
+    @app.route("/", strict_slashes=False)
     def index():
         return jsonify({"status": "Backend API running"})
 
     # === Login Route ===
-    @app.route("/messaging-api/login", methods=["POST"], strict_slashes=False)
+    @app.route("/login", methods=["POST"], strict_slashes=False)
     def login():
         data = request.get_json()
         if not data:
