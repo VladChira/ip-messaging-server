@@ -464,12 +464,21 @@ def register_routes(app):
             return jsonify({"error": f"User with ID {user_id} not found"}), 404
 
         data = request.get_json()
-        if not data or "newPassword" not in data:
-            return jsonify({"error": "Missing 'newPassword' in request body"}), 400
+        if not data:
+            return jsonify({"error": "Missing request body"}), 400
+        
+        # Check if both current and new passwords are provided
+        if "currentPassword" not in data or "newPassword" not in data:
+            return jsonify({"error": "Missing 'currentPassword' or 'newPassword' in request body"}), 400
 
+        # Verify current password
+        if not user.check_password(data["currentPassword"]):
+            return jsonify({"error": "Current password is incorrect"}), 401
+
+        # Validate new password
         new_password = data["newPassword"]
         if not isinstance(new_password, str) or len(new_password) < 6:
-             return jsonify({"error": "Password must be a string and at least 6 characters long"}), 400
+            return jsonify({"error": "Password must be a string and at least 6 characters long"}), 400
 
         try:
             user.password = new_password # Uses the setter, which hashes
