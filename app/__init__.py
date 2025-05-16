@@ -23,7 +23,7 @@ application = Flask(__name__)
 application.config["JWT_SECRET_KEY"] = os.getenv("JWT_SECRET_KEY", "super-secret-key-change-in-production")
 application.config["JWT_ACCESS_TOKEN_EXPIRES"] = timedelta(hours=5)
 
-socketio = SocketIO(application, async_mode='eventlet', path='/messaging-api/socket.io')
+socketio = SocketIO(application, cors_allowed_origins="*", async_mode='eventlet', path='/messaging-api/socket.io')
 jwt = JWTManager(application)
 
 def create_app():
