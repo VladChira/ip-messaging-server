@@ -621,9 +621,32 @@ def register_routes(app):
     @app.route("/messaging-api/get-members/<string:chat_id>", methods=["GET"])
     @jwt_auth_required
     def get_members(chat_id):
+        """Get full UserData objects for chat members"""
         if chat_id not in chats:
             return jsonify({"error": "Chat not found"}), 404
-        return jsonify({"members": chats[chat_id].get_members()})
+        
+        chat = chats[chat_id]
+        
+        # Get the chat members (which have userIds)
+        chat_members = chat.members  # This gives us ChatMember objects
+        
+        # Look up full user data for each member
+        full_members = []
+        for chat_member in chat_members:
+            # Find the full user data by userId
+            # Convert to int since find_user_by_id expects int, but chat_member.user_id might be string
+            try:
+                user_id = int(chat_member.user_id)
+                user = find_user_by_id(user_id)
+                if user:
+                    full_members.append(user.to_dict())
+                else:
+                    # Fallback if user not found - this shouldn't happen in a real app
+                    print(f"Warning: User {chat_member.user_id} not found in users list")
+            except (ValueError, TypeError) as e:
+                print(f"Error converting user_id {chat_member.user_id} to int: {e}")
+        
+        return jsonify({"members": full_members})
     
 
     @app.route("/messaging-api/create-chat", methods=["POST"])
