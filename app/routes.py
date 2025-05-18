@@ -734,5 +734,21 @@ def register_routes(app):
             "unreadCounts": unread_counts,
             "totalUnread": total_unread
         })
+    
+    @app.route("/messaging-api/get-chat-members/<string:chat_id>", methods=["GET"])
+    @jwt_auth_required
+    def get_chat_members(chat_id):
+        """Get ChatMember objects (with read status) for a specific chat"""
+        if chat_id not in chats:
+            return jsonify({"error": "Chat not found"}), 404
+        
+        chat = chats[chat_id]
+        
+        # Return the actual ChatMember objects with read status
+        chat_members = []
+        for member in chat.members:
+            chat_members.append(member.to_dict())
+        
+        return jsonify({"members": chat_members})
 
 
