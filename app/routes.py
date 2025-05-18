@@ -8,7 +8,6 @@ from flask_jwt_extended import (
 
 import datetime
 import functools
-from app import socketio
 
 
 # Import data lists and classes

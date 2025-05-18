@@ -8,6 +8,10 @@ from app.database import chats
 from typing import Any, Dict
 import datetime
 
+def get_socketio():
+    from app import socketio
+    return socketio
+
 # Track online users: sid -> user_id
 online_users: Dict[str, str] = {}
 
