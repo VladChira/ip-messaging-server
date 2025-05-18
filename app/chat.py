@@ -3,6 +3,7 @@ from enum import Enum
 import uuid
 from app.chat_member import ChatMember
 from app.message import Message
+from typing import List, Optional
 
 class ChatType(Enum):
     ONE_ON_ONE = "one_on_one"
@@ -27,16 +28,76 @@ class Chat:
         self.messages.append(msg)
         return msg
 
+    def get_member(self, user_id: str) -> Optional[ChatMember]:
+        """Get a specific member by user ID"""
+        return next((m for m in self.members if m.user_id == user_id), None)
+
+    def mark_as_read(self, user_id: str, message_id: str) -> bool:
+        """Mark messages as read for a specific user up to message_id"""
+        member = self.get_member(user_id)
+        if not member:
+            return False
+        
+        # Check if message exists in this chat
+        if not any(msg.message_id == message_id for msg in self.messages):
+            return False
+        
+        member.mark_as_read(message_id)
+        return True
+
+    def get_unread_count(self, user_id: str) -> int:
+        """Get the number of unread messages for a specific user"""
+        member = self.get_member(user_id)
+        if not member:
+            return 0
+        
+        if not member.last_read_message_id:
+            # If no messages have been read, all messages are unread
+            # Exclude messages sent by the user themselves
+            return len([msg for msg in self.messages if msg.sender_id != user_id])
+        
+        # Find the index of the last read message
+        last_read_index = -1
+        for i, msg in enumerate(self.messages):
+            if msg.message_id == member.last_read_message_id:
+                last_read_index = i
+                break
+        
+        if last_read_index == -1:
+            # Last read message not found, consider all as unread
+            return len([msg for msg in self.messages if msg.sender_id != user_id])
+        
+        # Count unread messages after the last read message
+        unread_count = 0
+        for i in range(last_read_index + 1, len(self.messages)):
+            if self.messages[i].sender_id != user_id:
+                unread_count += 1
+        
+        return unread_count
+
+    def get_last_message(self) -> Optional[Message]:
+        """Get the last message in the chat"""
+        return self.messages[-1] if self.messages else None
+
     def get_members(self):
         return [m.to_dict() for m in self.members]
 
     def get_messages(self):
         return [m.to_dict() for m in self.messages]
 
-    def to_dict(self):
-        return {
+    def to_dict(self, user_id: str = None):
+        """Convert to dict with optional unread count for specific user"""
+        base_dict = {
             "chatId": self.chat_id,
             "name": self.name,
             "chatType": self.chat_type.value,
             "createdAt": self.created_at.isoformat()
         }
+        
+        if user_id:
+            base_dict["unreadCount"] = self.get_unread_count(user_id)
+            last_message = self.get_last_message()
+            if last_message:
+                base_dict["lastMessage"] = last_message.to_dict()
+        
+        return base_dict

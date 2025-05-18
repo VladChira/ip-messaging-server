@@ -1,12 +1,12 @@
 from . import socketio
 
-
 from flask import request
 from flask_socketio import emit, join_room, leave_room
 from flask_jwt_extended import decode_token
 from app import socketio
 from app.database import chats
 from typing import Any, Dict
+import datetime
 
 # Track online users: sid -> user_id
 online_users: Dict[str, str] = {}
@@ -18,23 +18,11 @@ def handle_connect(auth: Dict[str, Any]):
     and broadcast presence update.
     """
 
-    # token = auth.get("token")
-    # if not token:
-    #     return False  # reject
-    
-    # print(token)
-
-    # try:
-    #     decoded = decode_token(token)
-    #     user_id = str(decoded["sub"])
-    # except Exception:
-    #     return False  # invalid token
-
     user_id = auth.get('userId')
     sid = request.sid
     online_users[sid] = user_id
 
-    print(f'Client connected with id {user_id} and session id f{sid}')
+    print(f'Client connected with id {user_id} and session id {sid}')
 
     # Notify everyone that this user is online
     emit(
@@ -75,6 +63,19 @@ def handle_join_chat(data: Dict[str, Any]):
         return
 
     join_room(chat_id)
+    
+    # Optionally auto-mark as read when joining a chat
+    # This is a common UX pattern - when user opens a chat, mark it as read
+    auto_mark_read = data.get("autoMarkRead", False)
+    if auto_mark_read and chat.messages:
+        last_message = chat.get_last_message()
+        if last_message and chat.mark_as_read(user_id, last_message.message_id):
+            emit("marked_as_read", {
+                "chatId": chat_id,
+                "userId": user_id,
+                "messageId": last_message.message_id,
+                "timestamp": datetime.datetime.now(datetime.UTC).isoformat()
+            }, room=chat_id)
 
 
 @socketio.on("leave_chat")
@@ -84,6 +85,42 @@ def handle_leave_chat(data: Dict[str, Any]):
     """
     chat_id = data.get("chatId")
     leave_room(chat_id)
+
+
+@socketio.on("mark_as_read")
+def handle_mark_as_read(data: Dict[str, Any]):
+    """
+    Client marks messages as read up to a specific message ID.
+    """
+    chat_id = data.get("chatId")
+    message_id = data.get("messageId")
+    sid = request.sid
+    user_id = online_users.get(sid)
+    
+    if not user_id:
+        emit("error", {"message": "Not authenticated"})
+        return
+    
+    chat = chats.get(chat_id)
+    if not chat:
+        emit("error", {"message": "Chat not found"})
+        return
+    
+    if not any(m.user_id == user_id for m in chat.members):
+        emit("error", {"message": "Not a member of chat"})
+        return
+    
+    # Mark as read
+    if chat.mark_as_read(user_id, message_id):
+        # Broadcast to all users in the chat
+        emit("marked_as_read", {
+            "chatId": chat_id,
+            "userId": user_id,
+            "messageId": message_id,
+            "timestamp": datetime.datetime.now(datetime.UTC).isoformat()
+        }, room=chat_id)
+    else:
+        emit("error", {"message": "Failed to mark as read"})
 
 
 @socketio.on("started_typing")
@@ -138,13 +175,9 @@ def handle_send_message(data: Dict[str, Any]):
         emit("error", {"message": "Not authenticated"})
         return
 
-    print(chats)
-    print(chat_id)
-
     if not chat:
         emit("error", {"message": "Chat not found"})
         return
-    
     
     if not any(m.user_id == user_id for m in chat.members):
         emit("error", {"message": "Not a member of chat"})
@@ -156,6 +189,16 @@ def handle_send_message(data: Dict[str, Any]):
     if temp_id is not None:
         payload["tempId"] = temp_id
 
+    # Automatically mark the message as read for the sender
+    chat.mark_as_read(user_id, msg.message_id)
+
     # Broadcast to all in the room
     emit("message", payload, room=chat_id)
-
+    
+    # Also emit marked_as_read for the sender
+    emit("marked_as_read", {
+        "chatId": chat_id,
+        "userId": user_id,
+        "messageId": msg.message_id,
+        "timestamp": datetime.datetime.now(datetime.UTC).isoformat()
+    }, room=chat_id)

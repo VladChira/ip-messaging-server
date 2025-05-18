@@ -8,6 +8,7 @@ from flask_jwt_extended import (
 
 import datetime
 import functools
+from app import socketio
 
 
 # Import data lists and classes
@@ -592,9 +593,19 @@ def register_routes(app):
     @app.route("/messaging-api/get-chats", methods=["GET"], strict_slashes=False)
     @jwt_auth_required
     def get_chats_for_user():
-        user_id = get_jwt_identity()
+        user_id = str(get_jwt_identity())
         chat_ids = user_chats.get(user_id, [])
-        result = [chats[chat_id].to_dict() for chat_id in chat_ids if chat_id in chats]
+        result = []
+        
+        for chat_id in chat_ids:
+            if chat_id in chats:
+                chat = chats[chat_id]
+                chat_dict = chat.to_dict(user_id)  # Pass user_id to include unread count
+                result.append(chat_dict)
+        
+        # Sort chats by last message timestamp (most recent first)
+        result.sort(key=lambda x: x.get('lastMessage', {}).get('sentAt', ''), reverse=True)
+        
         return jsonify({"chats": result})
 
     @app.route("/messaging-api/get-messages/<string:chat_id>", methods=["GET"])
@@ -667,5 +678,62 @@ def register_routes(app):
             user_chats[member.user_id].append(chat.chat_id)
 
         return jsonify({"chat": chat.to_dict()}), 201
+    
+    # === Mark messages as read ===
+    @app.route("/messaging-api/mark-as-read", methods=["POST"], strict_slashes=False)
+    @jwt_auth_required
+    def mark_as_read():
+        """Mark messages as read up to a specific message ID in a chat"""
+        data = request.get_json()
+        user_id = str(get_jwt_identity())
+        
+        if not data or "chatId" not in data or "messageId" not in data:
+            return jsonify({"error": "Missing chatId or messageId in request body"}), 400
+        
+        chat_id = data["chatId"]
+        message_id = data["messageId"]
+        
+        # Check if chat exists
+        if chat_id not in chats:
+            return jsonify({"error": "Chat not found"}), 404
+        
+        chat = chats[chat_id]
+        
+        # Mark as read
+        if chat.mark_as_read(user_id, message_id):
+            # Emit socket event to notify other clients
+            socketio.emit("marked_as_read", {
+                "chatId": chat_id,
+                "userId": user_id,
+                "messageId": message_id,
+                "timestamp": datetime.datetime.now(datetime.UTC).isoformat()
+            }, room=chat_id)
+            
+            return jsonify({"success": True, "message": "Messages marked as read"}), 200
+        else:
+            return jsonify({"error": "Failed to mark as read. User not member of chat or message not found"}), 400
+
+    # === Get unread count for all chats ===
+    @app.route("/messaging-api/unread-counts", methods=["GET"], strict_slashes=False)
+    @jwt_auth_required
+    def get_unread_counts():
+        """Get unread message counts for all user's chats"""
+        user_id = str(get_jwt_identity())
+        chat_ids = user_chats.get(user_id, [])
+        
+        unread_counts = {}
+        total_unread = 0
+        
+        for chat_id in chat_ids:
+            if chat_id in chats:
+                chat = chats[chat_id]
+                unread_count = chat.get_unread_count(user_id)
+                unread_counts[chat_id] = unread_count
+                total_unread += unread_count
+        
+        return jsonify({
+            "unreadCounts": unread_counts,
+            "totalUnread": total_unread
+        })
 
 
