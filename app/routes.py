@@ -1,4 +1,5 @@
 from flask import jsonify, request, abort
+from flask_socketio import SocketIO
 from flask_jwt_extended import (
     create_access_token, 
     jwt_required, 
@@ -85,8 +86,11 @@ def jwt_auth_required(fn):
         # Call the original function
         return fn(*args, **kwargs)
     return wrapper
-
 # --- Route Registration ---
+socketio = SocketIO()
+
+def register_routes(app):
+    socketio.init_app(app)
 def register_routes(app):
 
     @app.route("/messaging-api", strict_slashes=False)
