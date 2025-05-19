@@ -778,4 +778,16 @@ def register_routes(app):
         
         return jsonify({"members": chat_members})
 
-
+    @app.route("/messaging-api/validate-token", methods=["GET"], strict_slashes=False)
+    @jwt_auth_required
+    def validate_token():
+        """Validate the JWT token and return user data"""
+        current_user_id = get_jwt_identity()
+        user = find_user_by_id(current_user_id)
+        if not user:
+            return jsonify({"error": "Unauthorized: User not found"}), 401
+            
+        return jsonify({
+            "user": user.to_dict(),
+            "message": "Token is valid"
+        }), 200
