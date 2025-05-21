@@ -92,40 +92,28 @@ def handle_leave_chat(data: Dict[str, Any]):
     leave_room(chat_id)
 
 
-# @socketio.on("mark_as_read")
-# def handle_mark_as_read(data: Dict[str, Any]):
-#     """
-#     Client marks messages as read up to a specific message ID.
-#     """
-#     chat_id = data.get("chatId")
-#     message_id = data.get("messageId")
-#     sid = request.sid
-#     user_id = online_users.get(sid)
+@socketio.on("mark_as_read")
+def handle_mark_as_read(data: Dict[str, Any]):
+    chat_id = data.get("chatId")
+    message_id = data.get("messageId")
+    sid = request.sid
+    user_id = online_users.get(sid)
     
-#     if not user_id:
-#         emit("error", {"message": "Not authenticated"})
-#         return
+    if not user_id:
+        emit("error", {"message": "Not authenticated"})
+        return
     
-#     chat = chats.get(chat_id)
-#     if not chat:
-#         emit("error", {"message": "Chat not found"})
-#         return
+    chat = chats.get(chat_id)
+    if not chat:
+        emit("error", {"message": "Chat not found"})
+        return
     
-#     if not any(m.user_id == user_id for m in chat.members):
-#         emit("error", {"message": "Not a member of chat"})
-#         return
+    if not any(m.user_id == user_id for m in chat.members):
+        emit("error", {"message": "Not a member of chat"})
+        return
     
-#     # Mark as read
-#     if chat.mark_as_read(user_id, message_id):
-#         # Broadcast to all users in the chat
-#         emit("marked_as_read", {
-#             "chatId": chat_id,
-#             "userId": user_id,
-#             "messageId": message_id,
-#             "timestamp": datetime.datetime.now(datetime.UTC).isoformat()
-#         }, room=chat_id)
-#     else:
-#         emit("error", {"message": "Failed to mark as read"})
+    # Mark as read
+    
 
 
 @socketio.on("started_typing")
@@ -195,7 +183,7 @@ def handle_send_message(data: Dict[str, Any]):
         payload["tempId"] = temp_id
 
     # Automatically mark the message as read for the sender
-    msg.seen_by.append(user_id)
+    msg.seen_by.append(int(user_id))
 
     # Broadcast to all in the room
     emit("message", payload, room=chat_id)
