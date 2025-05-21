@@ -68,18 +68,19 @@ def handle_join_chat(data: Dict[str, Any]):
 
     join_room(chat_id)
     
-    # Optionally auto-mark as read when joining a chat
-    # This is a common UX pattern - when user opens a chat, mark it as read
-    auto_mark_read = data.get("autoMarkRead", False)
-    if auto_mark_read and chat.messages:
-        last_message = chat.get_last_message()
-        if last_message and chat.mark_as_read(user_id, last_message.message_id):
-            emit("marked_as_read", {
-                "chatId": chat_id,
-                "userId": user_id,
-                "messageId": last_message.message_id,
-                "timestamp": datetime.datetime.now(datetime.UTC).isoformat()
-            }, room=chat_id)
+    # Client joined a chat, mark all current messages in the chat as seen by
+    # this user
+    newly_seen = chat.mark_all_as_seen(user_id)
+
+    # If a message has been seen by all members of a group (or the other person in the one-on-one chat) 
+    # AND it was not marked as seen before,
+    # mark it now and emit the socket event that says the message has been seen
+    for msg in newly_seen:
+        emit(
+            "message_read",
+            {"chatId": chat_id, "messageId": msg.message_id, "userId": user_id},
+            room=chat_id
+        )
 
 
 @socketio.on("leave_chat")
@@ -91,40 +92,40 @@ def handle_leave_chat(data: Dict[str, Any]):
     leave_room(chat_id)
 
 
-@socketio.on("mark_as_read")
-def handle_mark_as_read(data: Dict[str, Any]):
-    """
-    Client marks messages as read up to a specific message ID.
-    """
-    chat_id = data.get("chatId")
-    message_id = data.get("messageId")
-    sid = request.sid
-    user_id = online_users.get(sid)
+# @socketio.on("mark_as_read")
+# def handle_mark_as_read(data: Dict[str, Any]):
+#     """
+#     Client marks messages as read up to a specific message ID.
+#     """
+#     chat_id = data.get("chatId")
+#     message_id = data.get("messageId")
+#     sid = request.sid
+#     user_id = online_users.get(sid)
     
-    if not user_id:
-        emit("error", {"message": "Not authenticated"})
-        return
+#     if not user_id:
+#         emit("error", {"message": "Not authenticated"})
+#         return
     
-    chat = chats.get(chat_id)
-    if not chat:
-        emit("error", {"message": "Chat not found"})
-        return
+#     chat = chats.get(chat_id)
+#     if not chat:
+#         emit("error", {"message": "Chat not found"})
+#         return
     
-    if not any(m.user_id == user_id for m in chat.members):
-        emit("error", {"message": "Not a member of chat"})
-        return
+#     if not any(m.user_id == user_id for m in chat.members):
+#         emit("error", {"message": "Not a member of chat"})
+#         return
     
-    # Mark as read
-    if chat.mark_as_read(user_id, message_id):
-        # Broadcast to all users in the chat
-        emit("marked_as_read", {
-            "chatId": chat_id,
-            "userId": user_id,
-            "messageId": message_id,
-            "timestamp": datetime.datetime.now(datetime.UTC).isoformat()
-        }, room=chat_id)
-    else:
-        emit("error", {"message": "Failed to mark as read"})
+#     # Mark as read
+#     if chat.mark_as_read(user_id, message_id):
+#         # Broadcast to all users in the chat
+#         emit("marked_as_read", {
+#             "chatId": chat_id,
+#             "userId": user_id,
+#             "messageId": message_id,
+#             "timestamp": datetime.datetime.now(datetime.UTC).isoformat()
+#         }, room=chat_id)
+#     else:
+#         emit("error", {"message": "Failed to mark as read"})
 
 
 @socketio.on("started_typing")
@@ -194,15 +195,7 @@ def handle_send_message(data: Dict[str, Any]):
         payload["tempId"] = temp_id
 
     # Automatically mark the message as read for the sender
-    chat.mark_as_read(user_id, msg.message_id)
+    msg.seen_by.append(user_id)
 
     # Broadcast to all in the room
     emit("message", payload, room=chat_id)
-    
-    # Also emit marked_as_read for the sender
-    emit("marked_as_read", {
-        "chatId": chat_id,
-        "userId": user_id,
-        "messageId": msg.message_id,
-        "timestamp": datetime.datetime.now(datetime.UTC).isoformat()
-    }, room=chat_id)

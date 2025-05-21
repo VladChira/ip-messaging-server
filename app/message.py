@@ -1,4 +1,5 @@
 import datetime
+from typing import List
 import uuid
 
 class Message:
@@ -8,6 +9,7 @@ class Message:
         self.sender_id = sender_id
         self.text = text
         self.sent_at = datetime.datetime.now(datetime.UTC)
+        self.seen_by: List[int] = []
 
     def to_dict(self):
         return {
@@ -15,5 +17,6 @@ class Message:
             "chatId": self.chat_id,
             "senderId": self.sender_id,
             "text": self.text,
-            "sentAt": self.sent_at.isoformat()
+            "sentAt": self.sent_at.isoformat(),
+            "seenBy": self.seen_by,
         }

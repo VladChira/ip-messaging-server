@@ -32,48 +32,60 @@ class Chat:
         """Get a specific member by user ID"""
         return next((m for m in self.members if m.user_id == user_id), None)
 
-    def mark_as_read(self, user_id: str, message_id: str) -> bool:
-        """Mark messages as read for a specific user up to message_id"""
-        member = self.get_member(user_id)
-        if not member:
-            return False
-        
-        # Check if message exists in this chat
-        if not any(msg.message_id == message_id for msg in self.messages):
-            return False
-        
-        member.mark_as_read(message_id)
-        return True
+    def mark_message_seen(self, user_id: str, message: Message):
+        """
+        Mark a single message as seen by user.
+        Returns True if newly marked, False if already present.
+        """
+        if user_id == message.sender_id:
+            return False  # sender doesn't count
+        if user_id not in message.seen_by:
+            message.seen_by.append(int(user_id))
+            return True
+        return False
+    
+    def mark_all_as_seen(self, user_id: str):
+        """
+        Mark all current messages in chat as seen by this user.
+        Returns list of messages newly marked.
+        """
+        newly_seen = []
+        for msg in self.messages:
+            if self.mark_message_seen(user_id, msg):
+                newly_seen.append(msg)
+        return newly_seen
 
     def get_unread_count(self, user_id: str) -> int:
-        """Get the number of unread messages for a specific user"""
-        member = self.get_member(user_id)
-        if not member:
-            return 0
+        return 0 # todo reimplement this
+    
+        # """Get the number of unread messages for a specific user"""
+        # member = self.get_member(user_id)
+        # if not member:
+        #     return 0
         
-        if not member.last_read_message_id:
-            # If no messages have been read, all messages are unread
-            # Exclude messages sent by the user themselves
-            return len([msg for msg in self.messages if msg.sender_id != user_id])
+        # if not member.last_read_message_id:
+        #     # If no messages have been read, all messages are unread
+        #     # Exclude messages sent by the user themselves
+        #     return len([msg for msg in self.messages if msg.sender_id != user_id])
         
-        # Find the index of the last read message
-        last_read_index = -1
-        for i, msg in enumerate(self.messages):
-            if msg.message_id == member.last_read_message_id:
-                last_read_index = i
-                break
+        # # Find the index of the last read message
+        # last_read_index = -1
+        # for i, msg in enumerate(self.messages):
+        #     if msg.message_id == member.last_read_message_id:
+        #         last_read_index = i
+        #         break
         
-        if last_read_index == -1:
-            # Last read message not found, consider all as unread
-            return len([msg for msg in self.messages if msg.sender_id != user_id])
+        # if last_read_index == -1:
+        #     # Last read message not found, consider all as unread
+        #     return len([msg for msg in self.messages if msg.sender_id != user_id])
         
-        # Count unread messages after the last read message
-        unread_count = 0
-        for i in range(last_read_index + 1, len(self.messages)):
-            if self.messages[i].sender_id != user_id:
-                unread_count += 1
+        # # Count unread messages after the last read message
+        # unread_count = 0
+        # for i in range(last_read_index + 1, len(self.messages)):
+        #     if self.messages[i].sender_id != user_id:
+        #         unread_count += 1
         
-        return unread_count
+        # return unread_count
 
     def get_last_message(self) -> Optional[Message]:
         """Get the last message in the chat"""
