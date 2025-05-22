@@ -5,6 +5,7 @@ from flask import Flask
 from flask_sqlalchemy import SQLAlchemy
 from flask_migrate import Migrate
 from flask_socketio import SocketIO
+from flask_cors import CORS
 from flask_jwt_extended import JWTManager
 from datetime import timedelta
 from dotenv import load_dotenv
@@ -19,6 +20,8 @@ from app.database import create_chats
 from app.routes import register_routes
 
 application = Flask(__name__)
+CORS(application, origins="*")
+
  # Configurare JWT
 application.config["JWT_SECRET_KEY"] = os.getenv("JWT_SECRET_KEY", "super-secret-key-change-in-production")
 application.config["JWT_ACCESS_TOKEN_EXPIRES"] = timedelta(hours=5)
