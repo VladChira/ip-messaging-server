@@ -96,6 +96,11 @@ class Chat:
 
     def get_messages(self):
         return [m.to_dict() for m in self.messages]
+    
+    def get_message_by_id(self, messageId):
+        for msg in self.messages:
+            if msg.message_id == messageId:
+                return msg
 
     def to_dict(self, user_id: str = None):
         """Convert to dict with optional unread count for specific user"""

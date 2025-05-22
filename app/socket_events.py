@@ -1,3 +1,4 @@
+from app.chat import Chat
 from . import socketio
 
 from flask import request
@@ -70,14 +71,14 @@ def handle_join_chat(data: Dict[str, Any]):
     
     # Client joined a chat, mark all current messages in the chat as seen by
     # this user
-    newly_seen = chat.mark_all_as_seen(user_id)
+    newly_seen = chat.mark_all_as_seen(int(user_id))
 
     # If a message has been seen by all members of a group (or the other person in the one-on-one chat) 
     # AND it was not marked as seen before,
     # mark it now and emit the socket event that says the message has been seen
     for msg in newly_seen:
         emit(
-            "message_read",
+            "mark_as_read",
             {"chatId": chat_id, "messageId": msg.message_id, "userId": user_id},
             room=chat_id
         )
@@ -94,6 +95,7 @@ def handle_leave_chat(data: Dict[str, Any]):
 
 @socketio.on("mark_as_read")
 def handle_mark_as_read(data: Dict[str, Any]):
+    print('Got a mark as read')
     chat_id = data.get("chatId")
     message_id = data.get("messageId")
     sid = request.sid
@@ -103,7 +105,7 @@ def handle_mark_as_read(data: Dict[str, Any]):
         emit("error", {"message": "Not authenticated"})
         return
     
-    chat = chats.get(chat_id)
+    chat: Chat = chats.get(chat_id)
     if not chat:
         emit("error", {"message": "Chat not found"})
         return
@@ -111,9 +113,17 @@ def handle_mark_as_read(data: Dict[str, Any]):
     if not any(m.user_id == user_id for m in chat.members):
         emit("error", {"message": "Not a member of chat"})
         return
-    
-    # Mark as read
-    
+
+    # 1. Mark it as read in in-memory store
+    msg = chat.get_message_by_id(message_id)
+    if user_id not in msg.seen_by:
+        msg.seen_by.append(int(user_id))
+
+    # 2. Broadcast a “message_read” event to all online members
+    payload = {"chatId": chat_id, "messageId": message_id, "userId": user_id}
+    for other_sid, uid in online_users.items():
+        if any(m.user_id == uid for m in chat.members):
+            socketio.emit("mark_as_read", payload, room=other_sid)
 
 
 @socketio.on("started_typing")
@@ -185,5 +195,9 @@ def handle_send_message(data: Dict[str, Any]):
     # Automatically mark the message as read for the sender
     msg.seen_by.append(int(user_id))
 
-    # Broadcast to all in the room
-    emit("message", payload, room=chat_id)
+    # Emit to every connected sid whose user is in that set
+    member_ids = {m.user_id for m in chat.members}
+    for sid, uid in online_users.items():
+        if uid in member_ids:
+            # “room=sid” targets exactly that socket
+            socketio.emit("message", payload, room=sid)
