@@ -33,7 +33,7 @@ def create_app():
     create_users()
     create_friendships()
     create_friend_requests()
-    create_chats()
+    # create_chats()
 
     load_dotenv()
 
