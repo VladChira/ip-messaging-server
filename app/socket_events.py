@@ -16,6 +16,13 @@ def get_socketio():
 # Track online users: sid -> user_id
 online_users: Dict[str, str] = {}
 
+def list_for_user(user_id):
+    return [
+        chat
+        for chat in chats.values()
+        if any(member.user_id == user_id for member in chat.members)
+    ]
+
 @socketio.on("connect")
 def handle_connect(auth: Dict[str, Any]):
     """
@@ -35,6 +42,11 @@ def handle_connect(auth: Dict[str, Any]):
         {"userId": user_id, "status": "online"},
         broadcast=True,
     )
+
+    # auto-join every room the user belongs to:
+    user_chats = list_for_user(user_id)
+    for chat in user_chats:
+        join_room(chat.chat_id)
 
 
 @socketio.on("disconnect")
@@ -67,21 +79,17 @@ def handle_join_chat(data: Dict[str, Any]):
         emit("error", {"message": "Invalid chat or not a member"})
         return
 
-    join_room(chat_id)
-    
-    # Client joined a chat, mark all current messages in the chat as seen by
-    # this user
-    newly_seen = chat.mark_all_as_seen(int(user_id))
+    # Mark all existing messages in that chat as seen by this user:
+    newly_seen = chat.mark_all_as_seen(user_id)
 
-    # If a message has been seen by all members of a group (or the other person in the one-on-one chat) 
-    # AND it was not marked as seen before,
-    # mark it now and emit the socket event that says the message has been seen
+    # Broadcast a `mark_as_read` event to everyone in that chat:
     for msg in newly_seen:
-        emit(
-            "mark_as_read",
-            {"chatId": chat_id, "messageId": msg.message_id, "userId": user_id},
-            room=chat_id
-        )
+        payload = {
+          "chatId":   chat_id,
+          "messageId": msg.message_id,
+          "userId":    user_id,
+        }
+        socketio.emit("mark_as_read", payload, room=chat_id)
 
 
 @socketio.on("leave_chat")
@@ -94,36 +102,27 @@ def handle_leave_chat(data: Dict[str, Any]):
 
 
 @socketio.on("mark_as_read")
-def handle_mark_as_read(data: Dict[str, Any]):
-    print('Got a mark as read')
-    chat_id = data.get("chatId")
-    message_id = data.get("messageId")
-    sid = request.sid
-    user_id = online_users.get(sid)
-    
-    if not user_id:
-        emit("error", {"message": "Not authenticated"})
-        return
-    
-    chat: Chat = chats.get(chat_id)
-    if not chat:
-        emit("error", {"message": "Chat not found"})
-        return
-    
-    if not any(m.user_id == user_id for m in chat.members):
-        emit("error", {"message": "Not a member of chat"})
-        return
+def handle_mark_as_read(data):
+    chat_id    = data["chatId"]
+    message_id = data["messageId"]
+    user_id    = online_users.get(request.sid)
+    chat       = chats.get(chat_id)
 
-    # 1. Mark it as read in in-memory store
+    if not chat or user_id not in {m.user_id for m in chat.members}:
+        return emit("error", {"message": "Invalid chat or not a member"})
+
     msg = chat.get_message_by_id(message_id)
     if user_id not in msg.seen_by:
-        msg.seen_by.append(int(user_id))
+        msg.seen_by.append(user_id)
 
-    # 2. Broadcast a “message_read” event to all online members
-    payload = {"chatId": chat_id, "messageId": message_id, "userId": user_id}
-    for other_sid, uid in online_users.items():
-        if any(m.user_id == uid for m in chat.members):
-            socketio.emit("mark_as_read", payload, room=other_sid)
+        payload = {
+        "chatId":    chat_id,
+        "messageId": message_id,
+        "userId":    user_id,
+        }
+        # broadcast to the entire chat room:
+        socketio.emit("mark_as_read", payload, room=chat_id)
+
 
 
 @socketio.on("started_typing")

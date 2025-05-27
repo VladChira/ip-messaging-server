@@ -23,6 +23,7 @@ def create_users():
         email="alice@example.com",
         username="alice",
         password="SecurePassword123",
+        status="Feeling wonderful today",
         role=Role.USER
     )
 
@@ -32,7 +33,7 @@ def create_users():
         email="bob.admin@example.com",
         username="admin_bob",
         password="SuperSecretAdminPassword!",
-        status="active",
+        status="Thankful :)",
         role=Role.ADMIN,
         createdAt=datetime.datetime(2023, 1, 15, 10, 30, 0)
     )
@@ -42,6 +43,7 @@ def create_users():
         name="Charlie Brown",
         email="charlie.brown@example.com",
         username="charlie",
+        status="I'm waiting for the good times now",
         password="PasswordForCharlie",
         role=Role.USER
     )
@@ -51,6 +53,7 @@ def create_users():
         name="Diana Prince",
         email="diana.prince@example.com",
         username="diana",
+        status="You shall not pass!",
         password="WonderWoman123",
         role=Role.USER
     )
