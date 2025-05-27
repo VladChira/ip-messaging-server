@@ -210,6 +210,9 @@ def handle_force_refresh(data: Dict[str, Any]):
     The client is expected to send a payload containing `chatId`.
     Example payload: {"chatId": "some_chat_id"}
     """
+
+    print("Got a refresh event")
+
     chat_id = data.get("chatId")
     sid = request.sid
     user_id_str = online_users.get(sid)  # user_id from online_users is str
@@ -233,6 +236,7 @@ def handle_force_refresh(data: Dict[str, Any]):
     
     member_ids = {m.user_id for m in chat.members}
     for sid, uid in online_users.items():
+        print(member_ids)
         if uid in member_ids:
             # “room=sid” targets exactly that socket
             socketio.emit("force_refresh", {"chatId": chat.chat_id}, room=sid)
