@@ -184,8 +184,10 @@ def create_chats():
 
     print(chat.chat_id)
 
-    user_chats[1].append(chat.chat_id)
-    user_chats[2].append(chat.chat_id)
+    # user_chats[1].append(chat.chat_id)
+    # user_chats[2].append(chat.chat_id)
+    user_chats.setdefault("1", []).append(chat.chat_id)
+    user_chats.setdefault("2", []).append(chat.chat_id)
 
     chat.add_message(1, "Hello, world!")
 
@@ -198,8 +200,8 @@ def create_chats():
     chats[chat2.chat_id] = chat2
     one_on_one_index[key] = chat2.chat_id
 
-    user_chats[1].append(chat2.chat_id)
-    user_chats[3].append(chat2.chat_id)
+    user_chats.setdefault("1", []).append(chat2.chat_id)
+    user_chats.setdefault("3", []).append(chat2.chat_id)
 
     chat2.add_message(3, "Hello again, world!")
 
@@ -211,9 +213,9 @@ def create_chats():
 
     chats[chat3.chat_id] = chat3
 
-    user_chats[1].append(chat3.chat_id)
-    user_chats[2].append(chat3.chat_id)
-    user_chats[3].append(chat3.chat_id)
+    user_chats.setdefault("1", []).append(chat3.chat_id)
+    user_chats.setdefault("2", []).append(chat3.chat_id)
+    user_chats.setdefault("3", []).append(chat3.chat_id)
 
     chat3.add_message(1, "Hello group!")
     chat3.add_message(2, "Hello group again!")
