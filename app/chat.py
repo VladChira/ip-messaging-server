@@ -67,7 +67,7 @@ class Chat:
             if msg.sender_id == int(user_id):
                 continue
             # if my ID is not yet in seen_by, it’s unread
-            if int(user_id) not in msg.seen_by:
+            if int(user_id) not in msg.seen_by and str(user_id) not in msg.seen_by:
                 count += 1
         return count
 
